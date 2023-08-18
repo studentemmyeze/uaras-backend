@@ -1,18 +1,29 @@
 const express = require('express');
-
-// const bodyParser = require("body-parser");
+// https://medium.com/swlh/node-js-how-to-access-mysql-remotely-using-ssh-d45e21221039
+const morgan = require('morgan');
+const bodyParser = require("body-parser");
 const http = require('http');
 const https = require('https');
 const reader = require('xlsx')
 const crypto = require('crypto')
 const fileUpload = require('express-fileupload');
 const mysql = require('mysql');
+// const morgan = require('morgan')
 const fetch = require('node-fetch');
-// const { sql } = require('googleapis/build/src/apis/sql');
 var fs = require('fs');
-const morgan = require("morgan");
-// const { variable } = require('@angular/compiler/src/output/output_ast');
-// const { resolve } = require('dns');
+require('dotenv/config');
+
+
+const app = express();
+app.listen(3000,()=> {
+  console.log('server is running @ !');
+})
+// Middleware
+app.use(express.json());
+app.use(morgan('tiny'));
+
+
+
 host = process.env.HOST;
 user = process.env.USER;
 password = process.env.PASSWORD;
@@ -42,7 +53,7 @@ const dataListMain = []
   // SUP- (RG_NUM, PREF_CO,SOURCE)
   // Excel format postUTME-(RG_NUM,RG_AGGREGATE,PU_AGGREGATE,CALC_AGGREGATE )
 
-const app = express();
+// const app = express();
 
 var tempUTME = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[]};
 const mainTableName = {
