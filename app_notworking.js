@@ -16,12 +16,11 @@ require('dotenv/config');
 
 const app = express();
 app.listen(3000,()=> {
-    console.log('server is running @ !');
+  console.log('server is running @ !');
 })
 // Middleware
 app.use(express.json());
 app.use(morgan('tiny'));
-
 
 
 
@@ -35,6 +34,9 @@ appSecret = process.env.APPSECRET;
 tokenUrl = process.env.TOKENURL;
 pushQualifiedUrl = process.env.PUSHQUALIFIEDURL;
 type22 = '';
+console.log("===========")
+console.log("Done reading settings variables");
+console.log("===========")
 // passmark = 160
 
 // ERROR CODES
@@ -184,15 +186,15 @@ const queryCreateTable = {
 }
 
 
-const uploadStatus = {"UTME":'ready', "DE":'ready', "PRE":'ready',"JUPEB":'ready',"SUP":'ready', "POSTUTME":'ready'};
-const uploadStatusMessage = {"UTME":'', "DE":'', "PRE":'',"JUPEB":'',"SUP":'', "POSTUTME":''};
+const uploadStatus = {"UTME":'ready', "DE":'ready', "PRE":'ready',"JUPEB":'ready',"SUP":'ready', "POSTUTME":'ready', "SAVEUTMESTATUS": ""};
+const uploadStatusMessage = {"UTME":'', "DE":'', "PRE":'',"JUPEB":'',"SUP":'', "POSTUTME":'', "SAVEUTMESTATUS": ""};
 
-const tempDataReceived = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[]};
-const tempDataMovedToMain = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[]};
-const updatedData = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[]};
-const totalTempDataProcessed = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[]};
-const dataNotProcessed = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[]};
-const time_taken_string = {"UTME":'', "DE":'', "PRE":'',"JUPEB":'',"SUP":'', "POSTUTME":''};
+const tempDataReceived = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[], "SAVEUTMESTATUS": []};
+const tempDataMovedToMain = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[], "SAVEUTMESTATUS": []};
+const updatedData = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[], "SAVEUTMESTATUS": []};
+const totalTempDataProcessed = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[], "SAVEUTMESTATUS": []};
+const dataNotProcessed = {"UTME":[], "DE":[], "PRE":[],"JUPEB":[],"SUP":[], "POSTUTME":[], "SAVEUTMESTATUS": []};
+const time_taken_string = {"UTME":'', "DE":'', "PRE":'',"JUPEB":'',"SUP":'', "POSTUTME":'', "SAVEUTMESTATUS": []};
 const date_start = {"UTME":new Date(), "DE":new Date(), "PRE":new Date(),"JUPEB":new Date(),"SUP":new Date(), "POSTUTME":new Date()};
 
 // try {
@@ -222,69 +224,14 @@ const date_start = {"UTME":new Date(), "DE":new Date(), "PRE":new Date(),"JUPEB"
 var isConnectedToDB = false
 var lastOpStat = {}
 
-
-
-
-
-
-
-// var db = new Promise(function(resolve, reject){
-// 	ssh.on('ready', function() {
-// 	  ssh.forwardOut(
-// 	    // source address, this can usually be any valid address
-// 	    '127.0.0.1',
-// 	    // source port, this can be any valid port number
-// 	    3000,
-// 	    // destination address (localhost here refers to the SSH server)
-// 	    host,
-// 	    // destination port
-	    
-// 	    function (err, stream) {
-// 	      if (err) throw err; // SSH error: can also send error in promise ex. reject(err)
-// 	      // use `sql` connection as usual
-// 	      	connection = mysql.createConnection({
-// 	          host     : host,
-// 	          user     : user,
-// 	          password : password, 
-// 	          database : database,
-// 	          stream: stream
-// 	        });
-
-// 	        // send connection back in variable depending on success or not
-// 		connection.connect(function(err){
-// 			if (err) {
-// 				resolve(connection);
-// 			} else {
-// 				reject(err);
-// 			}
-// 		});
-// 	  });
-// 	}).connect({
-// 	  host: host,
-	  
-// 	  username: user,
-// 	  password: password
-// 	});
-// });
-
-
-
-
-
-
-
-
-
 const connection = mysql.createConnection({
   host: host,
   user: user,
   password: password,
   database: database
 });
-
-
-
 // make the connection and other settings configurable in a txt config file
+
 
 
 async function makeConnection() {
@@ -307,10 +254,29 @@ async function closeConnection() {
   });
 }
 
-// makeConnection()
 
 function waitforme(ms)  {
   return new Promise( resolve => { setTimeout(resolve, ms); });
+}
+
+async function updateStudentRecordSave(type,tableName,toSendSample) {
+  queryTemp = ''
+  if (type == "SAVEUTMESTATUS") {
+    queryTemp = `UPDATE ${tableName}
+    SET department = '${await checkForApostro(toSendSample.department)}',
+
+    school = '${toSendSample.school}',
+
+    recommendation  = '${toSendSample.recommendation}',
+
+    qualified = ${toSendSample.qualified}
+
+    WHERE reg_num = '${toSendSample.reg_num}';`;
+  }
+
+  console.log("update query::", queryTemp)
+
+  await doQuery(queryTemp)
 }
 
 
@@ -362,6 +328,11 @@ async function updateStudentRecord(type,tableName,i, schoolType='') {
     english_score = ${tempUTME[type][i].EngScore} WHERE reg_num = '${tempUTME[type][i].RG_NUM}';`;
 
   }
+
+
+
+
+
   else if (type == "DE") {
     queryTemp = `UPDATE ${tableName}
     SET fullname = '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}',
@@ -503,6 +474,45 @@ async function updateStudentRecord_Registrations(type,tableName, record) {
   await doQuery(queryTemp)
 }
 
+async function matchUTMECandidateHashSaved(type,tableName, toSendSample) {
+
+  // reg_num, department, school, student_type, recommendation, qualified
+  const r1 = await recordsFromATableGrab(type,toSendSample.reg_num, tableName)
+  if (r1.length > 0) {
+    const newJSON =
+    {reg_num: toSendSample.reg_num , department: toSendSample.department,
+
+      school: (toSendSample.school ? (
+        toSendSample.phone ==="1" ? "UMUNZE" :
+        (toSendSample.phone ==="2" ? "AUCHI":(toSendSample.phone ==="3" ? "POPE JOHN" : "ESCET"))) : 'UNIZIK' ) ,
+      student_type: toSendSample.student_type,
+      recommendation: toSendSample.recommendation, qualified: toSendSample.qualified}
+
+      const h1 = crypto.createHash('sha1').update(`${JSON.stringify(newJSON)}`).digest('hex')
+      const h2 = crypto.createHash('sha1').update(`${JSON.stringify(r1[0])}`).digest('hex')
+      // console.log("r1 from SavedTable::",r1[0])
+      // console.log("newJSON from MainUTMETable",newJSON)
+
+      if (h1 !== h2) {
+        console.log("not equal")
+        updateStudentRecordSave(type,tableName,newJSON)
+      }
+    // reg_num, department, school, student_type, recommendation, qualified
+
+  }
+  else {
+    try {
+      await addRecord2(type,tableName,toSendSample)
+      updatedData[type].push(toSendSample.reg_num)
+    } catch (error) {
+      dataNotProcessed[type].push(toSendSample.reg_num)
+      console.log("error saving UTME status")
+    }
+  }
+
+}
+
+
 
 async function matchUTMECandidateHash(type,tableName, tempTableName, schoolType='') {
   // console.log('checking hash')
@@ -568,6 +578,8 @@ async function checkTableExists(tableName) {
 }
 
 async function createTable(type, tableName) {
+
+
     var sql = ""
     if (type == "UTME") {
       sql = `
@@ -741,6 +753,42 @@ async function createTable(type, tableName) {
 
     }
 
+    if (type == "SAVEUTMESTATUS") {
+      sql = `
+    CREATE TABLE ${tableName} (
+      id INT NOT NULL AUTO_INCREMENT COMMENT 'unique ID for each candidate',
+      reg_num VARCHAR(30) NOT NULL COMMENT 'unique reg_num for each candidate ',
+      lastname VARCHAR(255) NOT NULL COMMENT 'lastname of candidate',
+      firstname VARCHAR(255) NOT NULL COMMENT 'firstname of candidate',
+      middlename VARCHAR(255) NOT NULL COMMENT 'lastname of candidate',
+
+
+      sex VARCHAR(30) NOT NULL COMMENT 'gender of candidate',
+      state VARCHAR(50) NOT NULL COMMENT 'candidate state of origin',
+      utme_aggregate INT NOT NULL COMMENT 'candidate aggregate score',
+      department VARCHAR(255) NOT NULL COMMENT 'department of choice',
+      faculty VARCHAR(255) NOT NULL COMMENT 'faculty of choice',
+      lga VARCHAR(255) NOT NULL COMMENT 'candidate lga of origin',
+      subject_1 VARCHAR(255) NOT NULL COMMENT 'subject combination one',
+      subject_1_score INT NOT NULL COMMENT 'subject one score',
+      subject_2 VARCHAR(255) NOT NULL COMMENT 'subject combination two',
+      subject_2_score INT NOT NULL COMMENT 'subject two score',
+      subject_3 VARCHAR(255) NOT NULL COMMENT 'subject combination three',
+      subject_3_score INT NOT NULL COMMENT 'subject three score',
+      english_score INT NOT NULL COMMENT 'english score',
+      school VARCHAR(255) DEFAULT NULL COMMENT 'school of candidate',
+      student_type INT NOT NULL COMMENT 'student type utme or de 1 or 2',
+      recommendation MEDIUMTEXT DEFAULT NULL COMMENT 'recommendation for candidate',
+
+      qualified INT NOT NULL COMMENT '1 for yes 0 for no',
+
+
+      edited TIMESTAMP on update CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE (reg_num)
+  ) ENGINE = InnoDB CHARSET = utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT = 'This table is for saving UTME Candidates Status'`
+    }
+
 
   // const result = await doQuery(sql)
   // return result
@@ -818,6 +866,13 @@ async function recordsFromATableGrab(type, regNo, tableName, condition=false) {
   FROM ${tableName} WHERE reg_num = '${regNo}'
   `
 }
+  }
+
+  else if (type == "SAVEUTMESTATUS") {
+    sql = `SELECT
+  reg_num, department, school, student_type, recommendation, qualified
+  FROM ${tableName} WHERE reg_num = '${regNo}'
+  `
   }
   else if (type == "DE") {
     sql = `SELECT reg_num, fullname, sex, state, department, lga, phone
@@ -929,7 +984,50 @@ async function readExcelFile(type,arrayBuffer) {
 
 
   tempUTME[type] = await removeEmpty(tempUpload);
-  
+  // const result = []
+  // tempUpload.forEach(e => {
+  //   // if (e.RG_NUM !== undefined && e.RG_NUM !== '' && e.RG_NUM !== ' ' ) {
+  //     console.log('this is e::',e.RG_NUM )
+  //     result.push(e)
+  //   // }
+  // })
+
+  // tempUTME[type] = result
+
+  // console.log(`look at excel:: ${tempUTME[type]}`)
+  // console.log(`look at excel1:: ${tempUTME[type][0].RG_NUM}`)
+  // console.log('tempUTMELENGTH::',tempUTME[type].length, tempUTME[type])
+  // newAnswer = []
+  // labels = {
+  //   __EMPTY: 'S/NO',
+  //   __EMPTY_1: 'NAME',
+  //   __EMPTY_2: 'JAMB REG. NO.',
+  //   __EMPTY_3: 'JAMB SCORE',
+  //   __EMPTY_4: 'PRE-SCIENCE N0',
+  //   __EMPTY_5: 'ENG',
+  //   __EMPTY_6: 'MATHS',
+  //   __EMPTY_7: 'BIO',
+  //   __EMPTY_8: 'CHEM',
+  //   __EMPTY_9: 'PHY',
+  //   __EMPTY_10: 'GEO',
+  //   __EMPTY_11: 'ECONS',
+  //   __EMPTY_12: 'GOVT',
+  //   __EMPTY_13: 'LIT',
+  //   __EMPTY_14: 'BEST 4 TOTAL',
+  //   __EMPTY_15: 'SEX ',
+  //   __EMPTY_16: 'STATE OF ORIGIN',
+  //   __EMPTY_17: 'AVG.S'
+  // }
+  // for (var i = 0; i < tempUTME[type].length; i++) {
+  //   console.log("ITEM LEN",Object.keys(tempUTME[type][i]), Object.keys(tempUTME[type][i]).length)
+  //   lengthObject = Object.keys(tempUTME[type][i]).length
+  //   if (i > 2 && lengthObject > 1)
+  //   {
+  //     ObjecttempUTME[type][i]
+
+  //   }
+
+  // }
   if (tempUTME[type].length > 0) {answer =  true;}
   return answer;
 }
@@ -967,10 +1065,11 @@ function httpsPost({body, ...options}) {
 
 
 
-// app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: false }));
-
+//app.use(bodyParser.json());
 app.use(express.json());
+app.use(morgan('tiny'));
+
+// app.use(bodyParser.urlencoded({ extended: false }));
 app.use(fileUpload());
 
 app.use((req, res, next) => {
@@ -981,104 +1080,35 @@ app.use((req, res, next) => {
   next();
 });
 
-async function addRecord(type,tableName, i, schoolType='') {
+async function addRecord2(type,tableName, toSendSample) {
+  // console.log("to send sample::", toSendSample)
+  // console.log("to send reg no::", toSendSample.reg_num)
+  queryTemp = `INSERT INTO ${tableName} (
+    reg_num, lastname, firstname, middlename, sex, state, utme_aggregate, department, faculty,
+    lga, subject_1, subject_1_score, subject_2,
+    subject_2_score, subject_3, subject_3_score, english_score, school, student_type, recommendation, qualified)
 
-  var queryTemp = ""
+ VALUES ('${toSendSample.reg_num}', '${await checkForApostro(toSendSample.lastname)}',
+ '${await checkForApostro(toSendSample.firstname)}',
+ '${await checkForApostro(toSendSample.middlename)}',
+ '${toSendSample.sex}', '${await checkForApostro(toSendSample.state)}',
+ ${toSendSample.utme_aggregate}, '${await checkForApostro(toSendSample.department)}', '${toSendSample.faculty}',
+ '${await checkForApostro(toSendSample.lga)}', '${toSendSample.subject_1}', ${toSendSample.subject_1_score},
+ '${toSendSample.subject_2}', ${toSendSample.subject_2_score}, '${toSendSample.subject_3}',
+ ${toSendSample.subject_3_score}, ${toSendSample.english_score},
+ '${toSendSample.phone ? (
+  toSendSample.phone ==="1" ? "UMUNZE" :
+  (toSendSample.phone ==="2" ? "AUCHI":(toSendSample.phone ==="3" ? "POPE JOHN" : "ESCET"))) : 'UNIZIK'}',
 
+ ${toSendSample.student_type}, '${toSendSample.recommendation}', ${toSendSample.qualified}
+)`
 
-
-  if (type === 'UTME' && schoolType !== '') {
-    // console.log("@ADD RECORD-type22", type22)
-
-    queryTemp = `INSERT INTO ${tableName} (
-      reg_num, fullname, sex, state, utme_aggregate, department, lga, subject_1, subject_1_score, subject_2,
-      subject_2_score, subject_3, subject_3_score, english_score, phone)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}','${tempUTME[type][i].RG_SEX}', '${await checkForApostro(tempUTME[type][i].STATE_NAME)}',
-    ${tempUTME[type][i].RG_AGGREGATE},
-    '${await checkForApostro(tempUTME[type][i].CO_NAME)}', '${await checkForApostro(tempUTME[type][i].LGA_NAME)}', '${tempUTME[type][i].Subject1}', ${tempUTME[type][i].RG_Sub1Score},
-    '${tempUTME[type][i].Subject2}', ${tempUTME[type][i].RG_Sub2Score}, '${tempUTME[type][i].Subject3}', ${tempUTME[type][i].RG_Sub3Score},
-    ${tempUTME[type][i].EngScore}, '${schoolType}')`
-  }
-  else if (type === 'UTME') {
-    queryTemp = `INSERT INTO ${tableName} (
-      reg_num, fullname, sex, state, utme_aggregate, department, lga, subject_1, subject_1_score, subject_2,
-      subject_2_score, subject_3, subject_3_score, english_score)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}','${tempUTME[type][i].RG_SEX}', '${await checkForApostro(tempUTME[type][i].STATE_NAME)}',
-    ${tempUTME[type][i].RG_AGGREGATE},
-    '${await checkForApostro(tempUTME[type][i].CO_NAME)}', '${await checkForApostro(tempUTME[type][i].LGA_NAME)}', '${tempUTME[type][i].Subject1}', ${tempUTME[type][i].RG_Sub1Score},
-    '${tempUTME[type][i].Subject2}', ${tempUTME[type][i].RG_Sub2Score}, '${tempUTME[type][i].Subject3}', ${tempUTME[type][i].RG_Sub3Score},
-    ${tempUTME[type][i].EngScore})`
-  }
-
-  else if (type === 'DE' && schoolType !== '') {
-    queryTemp = `INSERT INTO ${tableName} (
-       reg_num, fullname, sex, state, department, lga, phone)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}',
-    '${tempUTME[type][i].RG_SEX}', '${await checkForApostro(tempUTME[type][i].STATENAME)}',
-    '${await checkForApostro(tempUTME[type][i].CO_NAME)}', '${await checkForApostro(tempUTME[type][i].LGA)}',
-    '${schoolType}')`
-  }
-
-  else if (type === 'DE') {
-    queryTemp = `INSERT INTO ${tableName} (
-       reg_num, fullname, sex, state, department, lga)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}',
-    '${tempUTME[type][i].RG_SEX}', '${await checkForApostro(tempUTME[type][i].STATENAME)}',
-    '${await checkForApostro(tempUTME[type][i].CO_NAME)}', '${await checkForApostro(tempUTME[type][i].LGA)}')`
-  }
-
-  else if (type === 'PRE') {
-    queryTemp = `INSERT INTO ${tableName} (
-      reg_num, fullname, jamb_score, prescience_no, subjects, best_of_four, sex, state, department_admitted, lga, average)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}',${tempUTME[type][i].RG_AGGREGATE},
-    '${tempUTME[type][i].PRE_NUM}', ${tempUTME[type][i].SUBS}, '${tempUTME[type][i].BO4}', '${tempUTME[type][i].RG_SEX}', '${await checkForApostro(tempUTME[type][i].STATE_NAME)}',
-
-    '${await checkForApostro(tempUTME[type][i].CO_NAME)}', '${await checkForApostro(tempUTME[type][i].LGA_NAME)}', ${tempUTME[type][i].AVG})`
-
-  }
-
-  else if (type === 'JUPEB') {
-    queryTemp = `INSERT INTO ${tableName} (
-      reg_num, jupeb_no,  fullname, subjects, total_score, first_choice, second_choice, remarks)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${tempUTME[type][i].JUP_NUM}', '${await checkForApostro(tempUTME[type][i].RG_CANDNAME)}',
-    ${tempUTME[type][i].SUBS}, ${tempUTME[type][i].TOT_SCO}, '${tempUTME[type][i].FIRST_CO}',
-    '${tempUTME[type][i].SECOND_CO}', '${await checkForApostro(tempUTME[type][i].REMK)}') `
-
-
-
-  }
-  else if (type === 'SUP') {
-
-    queryTemp = `INSERT INTO ${tableName} (
-      reg_num, preferred_course,  source)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', '${tempUTME[type][i].PREF_CO}',
-    '${await checkForApostro(tempUTME[type][i].SOURCE)}') `
-
-
-
-  }
-  else if (type === 'POSTUTME') {
-    queryTemp = `INSERT INTO ${tableName} (
-      reg_num, utme_score,putme_score, calculated_average)
-
-    VALUES ('${tempUTME[type][i].RG_NUM}', ${tempUTME[type][i].RG_AGGREGATE},
-    ${tempUTME[type][i].PU_AGGREGATE}, ${tempUTME[type][i].CALC_AGGREGATE}) `
-
-  }
-
-
+// console.log(queryTemp)
+// console.log("\n")
   await doQuery(queryTemp)
 }
 
-// add record new
-async function addRecordNew(type,tableName, i, schoolType='') {
+async function addRecord(type,tableName, i, schoolType='') {
 
   var queryTemp = ""
 
@@ -1956,6 +1986,104 @@ async function waitForServerProcess(adelays) {
   console.log("delay end", new Date())
 }
 
+app.route('/api/push-to-chuka-save').get(onStudentsRecordSendSave)
+async function onStudentsRecordSendSave(req, res) {
+  type = "UTME"
+  let batchNo = 100;
+  currentBatch = 0;
+  var projectManagers = []
+  var issuesBatches = []
+  const start = req.query.start
+  const stop = req.query.stop
+  const dateLast = req.query.datelast
+  const bSize = req.query.batchsize
+  const delayspec = req.query.delays
+  const course = req.query.course
+  if (bSize) {
+    batchNo = bSize
+  }
+  if (delayspec) {delays = delayspec}
+
+
+  console.log("AWAIT REGNOS RESULT")
+
+  const regNoList = await getAllRegNoMain(start, stop, dateLast, course)
+  var total = 0
+  try {
+    total = regNoList.length;
+    // console.log("REGNOS RESULT",regNoList)
+
+  } catch  {
+    console.log('No students found within this search parameters')
+  }
+  //  var total = regNoList.length;
+   console.log("REGNOS RESULT",total)
+
+  //  batchCondition[2] = total
+
+  let oldtkMessage = ""
+  makeConnection()
+  if (!await checkTableExists(`uaras_saved_utme_candidate_status`)) {
+    // await matchUTMECandidateHashSaved(type,`uaras_saved_utme_candidate_status`,toSendSample)
+    await createTable(type,`uaras_saved_utme_candidate_status`)
+
+  }
+
+  for (let i = 0; i < total ; i++) {
+
+    const aRegNo = regNoList[i]['reg_num']
+    batchCondition[1] = i
+    const response = await requestWithRetry (i,aRegNo,type, projectManagers)
+    // console.log("this is projectManagers", projectManagers)
+    await saveDetailsOfPush('SAVEUTMESTATUS', projectManagers[0])
+    if (i % batchNo == 0 && i != 0) {
+      currentBatch += 1
+      batchCondition[0] = currentBatch
+
+      const copyprojectManagers = projectManagers
+      projectManagers = []
+      // await waitForServerProcess(delays)
+
+      const answerToken = await postChukaBatch(copyprojectManagers, issuesBatches)
+      // issuesBatches = []
+
+    }
+    else if(i+ 1 === total){
+      currentBatch += 1
+      batchCondition[0] = currentBatch
+      // await waitForServerProcess(delays)
+      const copyprojectManagers = projectManagers
+      const answerToken = await postChukaBatch(copyprojectManagers, issuesBatches)
+      // const waitanswer = await waitForServerProcess(delays)
+    }
+    console.log("COUNT OF PM::", projectManagers.length)
+    projectManagers = []
+    // console.log("this is i", i)
+
+  }
+  closeConnection()
+
+  console.log("ISSUES----------")
+  console.log(issuesBatches)
+  console.log("ISSUES----------")
+
+  try {
+    res.status(200).json({
+      message: `post qualified successful `,
+      count:total,
+      status: 200
+    });
+
+  }
+catch (error) {
+  res.status(500).json({
+  message: "Error, Failed to send from batch of the record",
+  });
+  }
+
+
+}
+
 //get maximum on main table
 // for loop that takes from one to the end and sends them in batches of 500
 
@@ -1978,7 +2106,7 @@ async function onStudentsRecordSend(req, res) {
   if (delayspec) {delays = delayspec}
 
 
-  console.log("AWAIT REGNOS RESULT", req)
+  console.log("AWAIT REGNOS RESULT")
 
   const regNoList = await getAllRegNoMain(start, stop, dateLast, course)
   var total = 0
@@ -2773,6 +2901,20 @@ async function postChukaBatch_with_retry (projectMList) {
   }
 }
 
+async function saveDetailsOfPush(type,toSendSample) {
+  // makeConnection()
+
+  // if (await checkTableExists(`uaras_saved_utme_candidate_status`)) {
+    await matchUTMECandidateHashSaved(type,`uaras_saved_utme_candidate_status`,toSendSample)
+
+  // }
+  // else {
+  //   await createTable(type,`uaras_saved_utme_candidate_status`)
+  //   await addRecord2(`uaras_saved_utme_candidate_status`,toSendSample)
+  // }
+
+    // closeConnection()
+}
 
 async function getStudentRegistrationInfo(ii,regNo, type, projectM) {
   // else {
